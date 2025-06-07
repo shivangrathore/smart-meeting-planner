@@ -4,45 +4,182 @@
 <head>
   <meta charset="UTF-8">
   <title>Smart Meeting Planner</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 2rem auto;
+      max-width: 800px;
+      padding: 0 1rem;
+      background: #f9f9f9;
+    }
+
+    h2,
+    h3 {
+      color: #333;
+    }
+
+    textarea,
+    input {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.3rem;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.2rem;
+    }
+
+    button {
+      padding: 0.6rem 1.2rem;
+      margin-top: 0.5rem;
+      margin-bottom: 1rem;
+      font-size: 1rem;
+      background-color: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #004999;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    th,
+    td {
+      border: 1px solid #ccc;
+      padding: 0.75rem;
+      text-align: center;
+    }
+
+    th {
+      background-color: #eaeaea;
+    }
+
+    .section {
+      background: white;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.05);
+      margin-bottom: 2rem;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 1rem;
+      }
+
+      table,
+      thead,
+      tbody,
+      th,
+      td,
+      tr {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
 </head>
 
 <body>
-  <h2>Paste Slot JSON</h2>
-  <textarea id="jsonInput" rows="10" cols="50"></textarea><br>
-  <button onclick="submitSlots()">Submit</button>
+  <h2>Smart Meeting Planner</h2>
 
-  <h3>Suggest Meeting</h3>
-  <input type="number" id="duration" value="30" min="1" />
-  <button onclick="suggest()">Suggest</button>
+  <!-- Submit Busy Slots -->
+  <div class="section">
+    <h3>Submit Busy Slots</h3>
+    <label for="jsonInput">Paste JSON Payload:</label>
+    <textarea id="jsonInput" rows="8" placeholder='{"users": [{"id": 1, "busy": [["09:00", "10:30"]]}]}'></textarea>
+    <button onclick="submitSlots()">Submit</button>
+  </div>
 
-  <h3>Suggestions</h3>
-  <table border="1" id="resultTable"></table>
+  <!-- Suggest Free Meeting Times -->
+  <div class="section">
+    <h3>Suggest Meeting Slots</h3>
+    <label for="duration">Meeting Duration (minutes):</label>
+    <input type="number" id="duration" value="30" min="1" />
+    <button onclick="suggest()">Suggest</button>
 
-  <h3>Book a Slot</h3>
-  <label>Start Time (HH:MM): <input type="text" id="bookStart" placeholder="14:00" /></label><br>
-  <label>End Time (HH:MM): <input type="text" id="bookEnd" placeholder="14:30" /></label><br>
-  <label>Participant IDs (comma-separated): <input type="text" id="participants" placeholder="1,2" /></label><br>
-  <button onclick="bookSlot()">Book Slot</button>
+    <table id="resultTable">
+      <thead>
+        <tr>
+          <th>Start</th>
+          <th>End</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Book a Slot -->
+  <div class="section">
+    <h3>Book a Slot</h3>
+    <label for="bookStart">Start Time (HH:MM):</label>
+    <input type="text" id="bookStart" placeholder="14:00" />
+
+    <label for="bookEnd">End Time (HH:MM):</label>
+    <input type="text" id="bookEnd" placeholder="14:30" />
+
+    <label for="participants">Participant IDs (comma-separated):</label>
+    <input type="text" id="participants" placeholder="1,2" />
+
+    <button onclick="bookSlot()">Book Slot</button>
+  </div>
+
+  <!-- View User Calendar -->
+  <div class="section">
+    <h3>View User Calendar</h3>
+    <label for="calendarUserId">User ID:</label>
+    <input type="number" id="calendarUserId" placeholder="1" />
+    <button onclick="viewCalendar()">View Calendar</button>
+
+    <table id="calendarTable">
+      <thead>
+        <tr>
+          <th>Start</th>
+          <th>End</th>
+          <th>Type</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
   <script>
     async function submitSlots() {
-      const data = JSON.parse(document.getElementById('jsonInput').value);
-      await fetch('/slots', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data)
-      });
-      alert("Slots submitted!");
+      try {
+        const data = JSON.parse(document.getElementById('jsonInput').value);
+        await fetch('/slots', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(data)
+        });
+        alert("Slots submitted!");
+      } catch (e) {
+        alert("Invalid JSON");
+      }
     }
 
     async function suggest() {
       const duration = document.getElementById('duration').value;
       const res = await fetch(`/suggest?duration=${duration}`);
       const slots = await res.json();
-      const table = document.getElementById("resultTable");
-      table.innerHTML = "<tr><th>Start</th><th>End</th></tr>";
+      const tableBody = document.getElementById("resultTable").querySelector("tbody");
+      tableBody.innerHTML = "";
       for (const [start, end] of slots) {
-        table.innerHTML += `<tr><td>${start}</td><td>${end}</td></tr>`;
+        tableBody.innerHTML += `<tr><td>${start}</td><td>${end}</td></tr>`;
       }
     }
 
@@ -50,14 +187,13 @@
       const start = document.getElementById('bookStart').value;
       const end = document.getElementById('bookEnd').value;
       const participantsStr = document.getElementById('participants').value;
-      let finalParticipants = null;
-      if (participantsStr.length > 0 && participantsStr[0].trim() !== "") {
-        finalParticipants = participantsStr.map(id => parseInt(id.trim()));
-      }
+      const participants = participantsStr.split(',').map(id => parseInt(id.trim()));
+      const finalParticipants = participants.filter(id => !isNaN(id) && id > 0);
+
       const res = await fetch('/book', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({interval: [start, end], participants: finalParticipants})
+        body: JSON.stringify({interval: [start, end], participants: finalParticipants || null})
       });
 
       if (res.ok) {
@@ -65,6 +201,28 @@
       } else {
         alert("Error booking slot");
       }
+    }
+
+    async function viewCalendar() {
+      const userId = document.getElementById('calendarUserId').value;
+      if (!userId) return alert("Please enter a valid user ID");
+
+      const res = await fetch(`/calendar/${userId}`);
+      const data = await res.json();
+      const tableBody = document.getElementById("calendarTable").querySelector("tbody");
+      tableBody.innerHTML = "";
+
+      const renderSlot = (slot, type) => {
+        const row = `<tr>
+      <td>${slot[0]}</td>
+      <td>${slot[1]}</td>
+      <td>${type}</td>
+    </tr>`;
+        tableBody.innerHTML += row;
+      };
+
+      data.busy.forEach(slot => renderSlot(slot, "Busy"));
+      data.booked.forEach(slot => renderSlot(slot, "Booked"));
     }
   </script>
 </body>

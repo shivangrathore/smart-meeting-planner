@@ -54,7 +54,7 @@ class Database:
         return {
             "user_id": user_id,
             "busy": [] if user is None else user.busy,
-            "booked": [b for b in self.booked if user_id in b.participants]
+            "booked": [[b.start,b.end] for b in self.booked if user_id in b.participants]
         }
 
     def book_slot(self, payload: BookRequest) -> None:
