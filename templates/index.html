@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Smart Meeting Planner</title>
+</head>
+
+<body>
+  <h2>Paste Slot JSON</h2>
+  <textarea id="jsonInput" rows="10" cols="50"></textarea><br>
+  <button onclick="submitSlots()">Submit</button>
+
+  <h3>Suggest Meeting</h3>
+  <input type="number" id="duration" value="30" min="1" />
+  <button onclick="suggest()">Suggest</button>
+
+  <h3>Suggestions</h3>
+  <table border="1" id="resultTable"></table>
+
+  <h3>Book a Slot</h3>
+  <label>Start Time (HH:MM): <input type="text" id="bookStart" placeholder="14:00" /></label><br>
+  <label>End Time (HH:MM): <input type="text" id="bookEnd" placeholder="14:30" /></label><br>
+  <label>Participant IDs (comma-separated): <input type="text" id="participants" placeholder="1,2" /></label><br>
+  <button onclick="bookSlot()">Book Slot</button>
+
+  <script>
+    async function submitSlots() {
+      const data = JSON.parse(document.getElementById('jsonInput').value);
+      await fetch('/slots', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+      });
+      alert("Slots submitted!");
+    }
+
+    async function suggest() {
+      const duration = document.getElementById('duration').value;
+      const res = await fetch(`/suggest?duration=${duration}`);
+      const slots = await res.json();
+      const table = document.getElementById("resultTable");
+      table.innerHTML = "<tr><th>Start</th><th>End</th></tr>";
+      for (const [start, end] of slots) {
+        table.innerHTML += `<tr><td>${start}</td><td>${end}</td></tr>`;
+      }
+    }
+
+    async function bookSlot() {
+      const start = document.getElementById('bookStart').value;
+      const end = document.getElementById('bookEnd').value;
+      const participantsStr = document.getElementById('participants').value;
+      let finalParticipants = null;
+      if (participantsStr.length > 0 && participantsStr[0].trim() !== "") {
+        finalParticipants = participantsStr.map(id => parseInt(id.trim()));
+      }
+      const res = await fetch('/book', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({interval: [start, end], participants: finalParticipants})
+      });
+
+      if (res.ok) {
+        alert("Slot booked successfully!");
+      } else {
+        alert("Error booking slot");
+      }
+    }
+  </script>
+</body>
+
+</html>
